@@ -1,12 +1,6 @@
-use std::vec::Vec;
+pub mod value;
 
-pub enum Value {
-    Number(f64),
-    Bool(bool),
-    String(String),
-    Object(Vec<Value>),
-    Movieclip,
-}
+pub use value::Value;
 
 #[cfg(test)]
 mod tests {
