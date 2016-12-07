@@ -1,0 +1,15 @@
+[package]
+name = "amf"
+version = "0.1.0"
+authors = ["Stargateur <antoine.plaskowski@epitech.eu>"]
+
+[[bin]]
+name="client"
+path="src/mainClient.rs"
+
+[[bin]]
+name="server"
+path="src/mainServer.rs"
+
+[dependencies]
+byteorder = "0.5.3"
