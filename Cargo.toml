@@ -1,0 +1,6 @@
+[package]
+name = "amf"
+version = "0.1.0"
+authors = ["Stargateur <antoine.plaskowski@epitech.eu>"]
+
+[dependencies]
