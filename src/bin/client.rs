@@ -1,8 +1,10 @@
-// In Rust we need to tell it where things are from, 
+// In Rust we need to tell it where things are from,
 // in this case we are using the read_to_string method
 // so we need to bring in the std::io::Read
 // module to the party. We also need TcpListener and
 // TcpStream
+extern crate amf;
+
 use std::io::{Read, Write};
 use std::net::{TcpStream};
 use std::str;
