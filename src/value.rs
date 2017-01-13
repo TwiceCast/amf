@@ -1,5 +1,7 @@
-use std::collections::BTreeMap;
+extern crate serde;
 
+use std::collections::BTreeMap;
+use std::fmt;
 use std::convert::From;
 
 pub type Map<K, V> = BTreeMap<K, V>;
@@ -125,5 +127,35 @@ impl From<f64> for Value {
 impl From<bool> for Value {
     fn from(v: bool) -> Value {
         Value::Bool(v)
+    }
+}
+
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "value")
+    }
+}
+
+impl serde::Serialize for Value {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: serde::Serializer {
+        match *self {
+            Value::Number(v) => serializer.serialize_f64(v),
+            Value::Bool(v) => serializer.serialize_bool(v),
+            Value::String(ref v) => serializer.serialize_str(&v),
+            //Value::Object,
+            Value::Movieclip => serializer.serialize_unit(),
+            Value::Null => serializer.serialize_unit(),
+            Value::Undefined => serializer.serialize_unit(),
+            Value::Reference(v) => serializer.serialize_u16(v),
+            //Value::ECMAArray,
+            //Value::StrictArray(Vec<Value>),
+            //Value::Date(v) => serializer.serialize_u16(v),
+            Value::Unsupported => serializer.serialize_unit(),
+            Value::Recordset => serializer.serialize_unit(),
+            Value::XMLDocument(ref v) => serializer.serialize_str(&v),
+            //TypedObject(String, Map<String, Value>),*/
+            _ => serializer.serialize_unit(),
+        }
     }
 }

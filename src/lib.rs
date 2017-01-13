@@ -1,4 +1,11 @@
+extern crate serde;
+
 use std::fmt;
+
+pub use self::ser::{Serializer};
+
+pub mod ser;
+pub mod value;
 
 #[derive(Debug)]
 pub enum Value<'a> {
