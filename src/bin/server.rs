@@ -1,7 +1,7 @@
 extern crate amf;
 extern crate byteorder;
 
-use amf::Value;
+use amf::OldValue;
 use std::io::{Read, BufReader, Write, Cursor};
 use std::net::{TcpListener, TcpStream};
 use std::str;
@@ -10,7 +10,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 
 #[derive(Debug)]
 struct Type<'a> {
-	type_object: Value<'a>,
+	type_object: OldValue<'a>,
 }
 
 impl<'a> fmt::Display for Type<'a> {
@@ -23,12 +23,12 @@ fn main() {
     let listener = TcpListener::bind("127.0.0.1:5432").unwrap();
 
     let mut stream = listener.accept().unwrap().0;
-    stream.write_all("toto".as_bytes()).unwrap();
+    stream.write_all("end".as_bytes()).unwrap();
     handle_request(stream);
 }
 
 fn read_ecma_array(array: &[u8]) -> (usize, Type) {
-	let mut arr: Vec<(&str, Value)> = Vec::new();
+	let mut arr: Vec<(&str, OldValue)> = Vec::new();
 	let count = read_size_32(&array[..4]);
 	let mut size = 4;
 	for _ in 0..count {
@@ -40,7 +40,7 @@ fn read_ecma_array(array: &[u8]) -> (usize, Type) {
 	if read_size(&array[size..size + 2]) != 0 && array[size + 2] != 0x09 {
 		panic!("Bad end of ecma array");
 	}
-	let t: Type = Type {type_object: Value::Object(arr) };
+	let t: Type = Type {type_object: OldValue::Object(arr) };
 	return (size + 3, t);
 }
 
@@ -83,22 +83,22 @@ fn read_type(array: &[u8]) -> (usize, Type) {
 
 fn read_bool(array: &[u8]) -> (usize, Type) {
 	match array[0] {
-		0x00 => (1, Type {type_object: Value::Bool(false)}),
-		0x01 => (1, Type {type_object: Value::Bool(true)}),
+		0x00 => (1, Type {type_object: OldValue::Bool(false)}),
+		0x01 => (1, Type {type_object: OldValue::Bool(true)}),
 		_ => panic!("Unknown boolean"),
 	}
 }
 
 fn read_string(array: &[u8]) -> (usize, Type) {
 	let size = read_size(array);
-	let t: Type = Type {type_object : Value::String(str::from_utf8(&array[2..size + 2]).unwrap())};
+	let t: Type = Type {type_object : OldValue::String(str::from_utf8(&array[2..size + 2]).unwrap())};
 	return (size + 2, t);
 }
 
 fn read_number(array: &[u8]) -> (usize, Type) {
 	let mut cursor = Cursor::new(&array[0..8]);
 	let nb = cursor.read_f64::<BigEndian>().unwrap();
-	let t: Type = Type { type_object : Value::Number(nb)};
+	let t: Type = Type { type_object : OldValue::Number(nb)};
 	return (8, t);
 }
 
@@ -114,7 +114,7 @@ fn read_size_32(array: &[u8]) -> usize {
 	return size
 }
 
-fn read_propriety(array: &[u8], size: usize) -> (usize, (&str, Value)) {
+fn read_propriety(array: &[u8], size: usize) -> (usize, (&str, OldValue)) {
 	let key = str::from_utf8(&array[..size]).unwrap();
 	let value = read_type(&array[size..]);
 	return (2 + size + value.0, (key, value.1.type_object));
@@ -123,12 +123,12 @@ fn read_propriety(array: &[u8], size: usize) -> (usize, (&str, Value)) {
 fn read_object(array: &[u8]) -> (usize, Type) {
 	let mut i = 0;
 	let t: Type;
-	let mut obj: Vec<(&str, Value)> = Vec::new();
+	let mut obj: Vec<(&str, OldValue)> = Vec::new();
 	while i < array.len() {
 		let size = read_size(&array[i..i + 2]);
 		match size {
 			0 => {
-				t = Type { type_object : Value::Object(obj) };
+				t = Type { type_object : OldValue::Object(obj) };
 				return (i + 3, t);
 			},
 			_ => {

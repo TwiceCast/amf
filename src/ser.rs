@@ -1,12 +1,17 @@
+extern crate byteorder;
+
 use std::result;
 use std::io;
+use std::str;
+use std::char;
 use std::error;
 use std::fmt;
+use self::byteorder::{BigEndian, WriteBytesExt};
 
 use serde::ser;
 
 pub struct Serializer<W> {
-	writer: W,
+	pub writer: W,
 }
 
 #[derive(Debug)]
@@ -57,8 +62,12 @@ impl<W> ser::Serializer for Serializer<W>
 	type StructVariantState = ();
 
 	fn serialize_bool(&mut self, v: bool) -> Result<(), self::Error> {
-		let _ = self.writer.write(b"01");
-		let _ = write!(self.writer, "{}", v.to_string());
+		let _ = self.writer.write(&[1]);
+        let mut wtr = vec![];
+        wtr.write_u8(v as u8).unwrap();
+        for digit in &mut wtr {
+	        let _ = self.writer.write(&[*digit]);
+        }
 		result::Result::Ok(())
 	}
 
@@ -99,8 +108,12 @@ impl<W> ser::Serializer for Serializer<W>
 	}
 
 	fn serialize_f64(&mut self, v: f64) -> Result<(), self::Error> {
-		let _ = self.writer.write(b"00");
-		let _ = write!(self.writer, "{}", v.to_string());
+		let _ = self.writer.write(&[0]);
+        let mut wtr = vec![];
+        wtr.write_f64::<BigEndian>(v).unwrap();
+        for digit in &mut wtr {
+        	let _ = self.writer.write(&[*digit]);
+        }
 		result::Result::Ok(())
 	}
 

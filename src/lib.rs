@@ -4,25 +4,27 @@ use std::fmt;
 
 pub use self::ser::{Serializer};
 
+pub use self::value::Value;
+
 pub mod ser;
 pub mod value;
 
 #[derive(Debug)]
-pub enum Value<'a> {
+pub enum OldValue<'a> {
     Number(f64),
     Bool(bool),
     String(&'a str),
-    Object(Vec<(&'a str, Value<'a>)>),
+    Object(Vec<(&'a str, OldValue<'a>)>),
 //    Movieclip,
 }
 
-impl<'a> fmt::Display for Value<'a> {
+impl<'a> fmt::Display for OldValue<'a> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match self {
-			&Value::Number(nbr) => write!(f, "nbr({})", nbr),
-			&Value::String(str) => write!(f, "str({})", str),
-			&Value::Bool(bool) => write!(f, "bool({})", bool),
-			&Value::Object(ref arr) =>{
+			&OldValue::Number(nbr) => write!(f, "nbr({})", nbr),
+			&OldValue::String(str) => write!(f, "str({})", str),
+			&OldValue::Bool(bool) => write!(f, "bool({})", bool),
+			&OldValue::Object(ref arr) =>{
 				let mut err = write!(f, "object {{\n");
 				for &(key, ref value) in arr {
 					err = err.and(write!(f, "{}: {}\n", key, value));

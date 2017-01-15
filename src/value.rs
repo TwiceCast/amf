@@ -1,7 +1,9 @@
 extern crate serde;
+extern crate byteorder;
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::str;
 use std::convert::From;
 
 pub type Map<K, V> = BTreeMap<K, V>;
@@ -133,7 +135,11 @@ impl From<bool> for Value {
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "value")
+        match *self {
+            Value::Number(v) => write!(f, "{}", v.to_string()),
+            Value::Bool(v) => write!(f, "{}", v.to_string()),
+            _ => write!(f, "value")
+        }
     }
 }
 
