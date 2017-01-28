@@ -138,6 +138,14 @@ impl fmt::Display for Value {
         match *self {
             Value::Number(v) => write!(f, "{}", v.to_string()),
             Value::Bool(v) => write!(f, "{}", v.to_string()),
+            Value::String(ref s) => write!(f, "{}", s.to_string()),
+            Value::Object(ref m) => {
+                let _ = write!(f, "Object{}\n", "{"); //TODO make this clean
+                for (k, v) in m {
+                    let _ = write!(f, "{} => {},\n", k, v);
+                }
+                write!(f, "{}\n", "}") //TODO make this clean
+            },
             _ => write!(f, "value")
         }
     }
@@ -149,7 +157,14 @@ impl serde::Serialize for Value {
             Value::Number(v) => serializer.serialize_f64(v),
             Value::Bool(v) => serializer.serialize_bool(v),
             Value::String(ref v) => serializer.serialize_str(&v),
-            //Value::Object,
+            Value::Object(ref m) => {
+                let mut state = serializer.serialize_map(None).unwrap();
+                for (k, v) in m {
+                    let _ = serializer.serialize_map_key(&mut state, k);
+                    let _ = serializer.serialize_map_value(&mut state, v);
+                }
+                serializer.serialize_map_end(state)
+            },
             Value::Movieclip => serializer.serialize_unit(),
             Value::Null => serializer.serialize_unit(),
             Value::Undefined => serializer.serialize_unit(),

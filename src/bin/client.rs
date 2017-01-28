@@ -8,11 +8,16 @@ extern crate serde;
 
 use serde::Serialize;
 use amf::{Serializer, Value};
+use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::net::{TcpStream};
 
 fn main() {
-	let val = Value::Number(42.);
+	let mut map = BTreeMap::new();
+	map.insert("proprieties1".to_string(), Value::Number(42.));
+	map.insert("proprieties2".to_string(), Value::String("42Yolo".to_string()));
+	map.insert("proprieties3".to_string(), Value::Bool(true));
+	let val = Value::Object(map);
 	println!("Envoi de {}", val.to_string());
 	let ser = Vec::with_capacity(128);
 	let mut serializer = Serializer {writer: ser };

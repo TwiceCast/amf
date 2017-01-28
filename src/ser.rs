@@ -135,7 +135,7 @@ impl<W> ser::Serializer for Serializer<W>
 	}
 
 	fn serialize_unit(&mut self) -> Result<(), self::Error> {
-		let _ = self.writer.write(b"05");
+		// TODO
 		result::Result::Ok(())
 	}
 
@@ -157,15 +157,18 @@ impl<W> ser::Serializer for Serializer<W>
 
 	fn serialize_char(&mut self, v: char) -> Result<(), self::Error> 
 	{
-		let _ = self.writer.write(b"02");
+		let _ = self.writer.write(&[2]);
+		let _ = self.writer.write(&[0, 1]);
 		let _ = write!(self.writer, "{:?}", v);
 		result::Result::Ok(())
 	}
 
 	fn serialize_str(&mut self, v: &str) -> Result<(), self::Error> 
 	{
-		let _ = self.writer.write(b"02");
-		let _ = write!(self.writer, "{:?}", v);
+		let _ = self.writer.write(&[2]);
+		let array = [(v.len() / 256) as u8, (v.len() % 256) as u8];
+		let _ = self.writer.write(&array);
+		let _ = self.writer.write(v.as_bytes());
 		result::Result::Ok(())
 	}
 
@@ -245,22 +248,25 @@ impl<W> ser::Serializer for Serializer<W>
     }
 
     fn serialize_map(&mut self, _len: Option<usize>) -> Result<Self::MapState, Self::Error> {
-    	// TODO
+		let _ = self.writer.write(&[3]);
 		result::Result::Ok(())
     }
 
-    fn serialize_map_key<T: ser::Serialize>(&mut self, _state: &mut Self::MapState, _key: T) -> Result<(), Self::Error> {
-    	// TODO
+    fn serialize_map_key<T: ser::Serialize>(&mut self, _state: &mut Self::MapState, key: T) -> Result<(), Self::Error> {
+		let ser = Vec::with_capacity(128);
+		let mut serializer = Serializer {writer: ser };
+		let _ = key.serialize(&mut serializer);
+		let _ = self.writer.write(&serializer.writer[1..]);
 		result::Result::Ok(())
     }
 
-    fn serialize_map_value<T: ser::Serialize>(&mut self, _state: &mut Self::MapState, _value: T) -> Result<(), Self::Error> {
-    	// TODO
+    fn serialize_map_value<T: ser::Serialize>(&mut self, _state: &mut Self::MapState, value: T) -> Result<(), Self::Error> {
+		let _ = value.serialize(self);
 		result::Result::Ok(())
     }
 
     fn serialize_map_end(&mut self, _state: Self::MapState,) -> Result<(), Self::Error> {
-    	// TODO
+		let _ = self.writer.write(&[0, 0, 9]);
 		result::Result::Ok(())
     }
 

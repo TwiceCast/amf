@@ -143,8 +143,11 @@ fn read_object(array: &[u8]) -> (usize, Type) {
 
 fn handle_request(stream: TcpStream) {
     let mut reader = BufReader::new(stream);
-    let mut array = [0; 526];
+    let mut array = [0; 128 ]; //Never forget to augment this size
     let size = reader.read(&mut array).unwrap();
+    /*for nb in array.iter() {
+    	println!("{}", nb);
+    }*/
     let mut i = 0;
     while i < size {
     	let propriety = read_type(&array[i..]);
