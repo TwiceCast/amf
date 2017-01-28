@@ -10,16 +10,16 @@ matrix:
 addons:
   apt:
     sources:
-      - george-edison55-precise-backports
+    - george-edison55-precise-backports
     packages:
-      - cmake
-      - cmake-data
+    - cmake
+    - cmake-data
 notifications:
   email:
     recipients:
-      - antoine.plaskowski@epitech.eu
-      - rodolphe.roussel@epitech.eu
+    - antoine.plaskowski@epitech.eu
+    - rodolphe.roussel@epitech.eu
     on_success: change
     on_failure: always
   slack:
-secure: X6ABry6nR94NKHySPqJAAE0yG/YdNSy0AIpbKGwmPUzqx6rkWHVfnX8QtwEga2au7XQ8V8rF0qQrf3mtTGm+mV9pvxZ08Oa8zTN0TnBXtxGfBf22vTLeH8N7oJaHq/1QuGH+0U/4g9+UFvmsbbJNsPxfR8zCzCY5DCVU8LaHfJZh8gkdt6DhTI9fKlXGFVgn+uw9lFep+aM/qeoKlXvgzSMqUs+DLxp3Jnn1FxL44LF3ZEor1X7dsFH7xdZgiRnFZW8TRZlxhuhY5GGOrCcArGhMqKSqMqZlkvAJWs0VhFmYUR1hFsneOy1/NTUNAlxJslHiTEysbdXLLQBnTnAVvCfrd2JDqjUpjPdj1KKJ/bzzjvOAaqBPNque+vqZTVQpSsY7S6BhnzjbQQxcg7iplFVB08Y4l7yzRBhM9TzRMtsljaLHxjqIGGaArt3EQw5M9n/jPgZkcOFmAxrHWhtqIXJX6StNHqFPES3X0A7bsgrbKU6GxThEjDRTdlU7vRvCwL8Jbhp4DHoyUsxQXLroBkcvbTHajMnTjVrv8hn29bUaLiwpJjdxHSdMWXjsVbP77iVaG9BWtkmB4RMy1csU63/v4ceYadbA3DZkBZh4mwE0oJ2+yyatvKlAzTC89dAERaeATA25klpZD8KX/mJtqVMy/ifbbXu1s/cPDEGpIqU=
+    secure: GnhzXRNbXEWI01EbAWBdQwZGmaAb/A0Nb29l+n1Y1DEylqYccb6xYQ0YdM0KkFxxNpE+6hyjuq7MAHUYa2nnkRwZYAPKvoeMlmKImiHboJ0lrYnStttN6YhlhP9yEkRd2L04Cw3ySbfm0A9TUxA0/paxAFvmVVabW9cLRfwm7rSAi+Wt574XlCCaea1dX+QPNsVH8TyM4olXjXA8xAf3wsB29X12oOaIN7xz6Eibw+MtyQfsWv9frxJJhe0kcxXpyoaN3wOBOvvXY/UPt72djdr1cIPNHjBNvh5AqonrPajcsQPcrgl6+r8xTUjPOk9J+wTmmVD+h36w7ymm/UouxdceZcLDfc7PXYUFX/O6fklT5HRGL5HtRNuCqR/xFMT1yDkrUJSu0j2Er0ezuNrVzTsdl/nY839SVL3CmNrTseBI/FthgpH2bOKC19M6B1x+lA7hcvhLjrHkwGZbwix+fCSbtKLXZzh0yA2ZKck63MOkqI7V/vxv24YQcOMC1jNvKzmG+DXuXv3vLP2Ctbc0yq5XcQSrGrAZSmCm2Q0MAljl4u+o4PA9sLzyoqRAwcJ4wB+0UjM4ulaaO2SlecIM2lM4I4342oo2rhJD1cjO4CGH21SyNH7lPWbTrljKnkeJnIgNQ97lsY3WH/vUCl3CD/v3u5Fyn7IHQn+MfglGhyI=
