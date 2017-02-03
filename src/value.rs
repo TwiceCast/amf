@@ -3,7 +3,6 @@ extern crate byteorder;
 
 use std::collections::BTreeMap;
 use std::fmt;
-use std::str;
 use std::convert::From;
 
 pub type Map<K, V> = BTreeMap<K, V>;
@@ -11,7 +10,7 @@ pub type Map<K, V> = BTreeMap<K, V>;
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Date {
     date: f64,
-    time_zone: u16,
+    time_zone: i16,
 }
 
 /// Value represente AMF type
@@ -30,6 +29,7 @@ pub enum Value {
     StrictArray(Vec<Value>),
     /// i16
     Date(Date),
+    LongString(String),
     Unsupported,
     /// This type is not supported and is reserved for future use.
     Recordset,
@@ -39,6 +39,7 @@ pub enum Value {
 }
 
 impl Value {
+
     /// Returns true if the `Value` is a Number. Returns false otherwise.
     ///
     /// # Examples
@@ -146,31 +147,47 @@ impl fmt::Display for Value {
                 }
                 write!(f, "{}\n", "}") //TODO make this clean
             },
+            Value::ECMAArray(ref m) => {
+                let _ = write!(f, "Object{}\n", "{"); //TODO make this clean
+                for (k, v) in m {
+                    let _ = write!(f, "{} => {},\n", k, v);
+                }
+                write!(f, "{}", "}") //TODO make this clean
+            },
             _ => write!(f, "value")
         }
     }
 }
 
 impl serde::Serialize for Value {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as serde::Serializer>::Ok, S::Error> where S: serde::Serializer {
         match *self {
             Value::Number(v) => serializer.serialize_f64(v),
             Value::Bool(v) => serializer.serialize_bool(v),
             Value::String(ref v) => serializer.serialize_str(&v),
             Value::Object(ref m) => {
-                let mut state = serializer.serialize_map(None).unwrap();
+                let mut map_serializer = serializer.serialize_map(None).unwrap();
+                use serde::ser::SerializeMap;
                 for (k, v) in m {
-                    let _ = serializer.serialize_map_key(&mut state, k);
-                    let _ = serializer.serialize_map_value(&mut state, v);
+                    let _ = map_serializer.serialize_key(k);
+                    let _ = map_serializer.serialize_value(v);
                 }
-                serializer.serialize_map_end(state)
+                map_serializer.end()
             },
             Value::Movieclip => serializer.serialize_unit(),
             Value::Null => serializer.serialize_unit(),
             Value::Undefined => serializer.serialize_unit(),
             Value::Reference(v) => serializer.serialize_u16(v),
-            //Value::ECMAArray,
-            //Value::StrictArray(Vec<Value>),
+            Value::ECMAArray(ref m) => {
+                let mut map_serializer = serializer.serialize_map(None).unwrap();
+                use serde::ser::SerializeMap;
+                for (k, v) in m {
+                    let _ = map_serializer.serialize_key(k);
+                    let _ = map_serializer.serialize_value(v);
+                }
+                map_serializer.end()
+            },
+//            Value::StrictArray(ref m) => serializer.serialize_strict_array(&m),
             //Value::Date(v) => serializer.serialize_u16(v),
             Value::Unsupported => serializer.serialize_unit(),
             Value::Recordset => serializer.serialize_unit(),
