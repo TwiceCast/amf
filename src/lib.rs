@@ -1,13 +1,17 @@
+#[macro_use]
 extern crate serde;
 
 use std::fmt;
 
-pub use self::ser::{Serializer};
-
+pub use self::ser::Serializer;
+pub use self::de::Deserializer;
+pub use self::reader::SliceReader;
 pub use self::value::Value;
 
 pub mod ser;
+pub mod de;
 pub mod value;
+pub mod reader;
 
 #[derive(Debug)]
 pub enum OldValue<'a> {
