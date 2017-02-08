@@ -3,6 +3,7 @@ extern crate byteorder;
 
 use std::collections::BTreeMap;
 use std::fmt;
+use serde::de;
 use std::convert::From;
 
 pub type Map<K, V> = BTreeMap<K, V>;
@@ -117,6 +118,15 @@ impl Value {
             None
         }
     }
+
+    pub fn is_null(&self) -> bool {
+        if let Value::Null = *self {
+            true
+        }
+        else {
+            false
+        }
+    }
 }
 
 // static NULL: Value = Value::Null;
@@ -148,12 +158,13 @@ impl fmt::Display for Value {
                 write!(f, "{}\n", "}") //TODO make this clean
             },
             Value::ECMAArray(ref m) => {
-                let _ = write!(f, "Object{}\n", "{"); //TODO make this clean
+                let _ = write!(f, "Tab{}\n", "{"); //TODO make this clean
                 for (k, v) in m {
                     let _ = write!(f, "{} => {},\n", k, v);
                 }
                 write!(f, "{}", "}") //TODO make this clean
             },
+            Value::Null => write!(f, "Null"),
             _ => write!(f, "value")
         }
     }
@@ -179,7 +190,7 @@ impl serde::Serialize for Value {
             Value::Undefined => serializer.serialize_unit(),
             Value::Reference(v) => serializer.serialize_u16(v),
             Value::ECMAArray(ref m) => {
-                let mut map_serializer = serializer.serialize_map(None).unwrap();
+                let mut map_serializer = serializer.serialize_map(Some(m.len())).unwrap();
                 use serde::ser::SerializeMap;
                 for (k, v) in m {
                     let _ = map_serializer.serialize_key(k);
@@ -195,5 +206,65 @@ impl serde::Serialize for Value {
             //TypedObject(String, Map<String, Value>),*/
             _ => serializer.serialize_unit(),
         }
+    }
+}
+
+
+impl de::Deserialize for Value {
+    fn deserialize<D>(deserializer: D) -> Result<Value, D::Error>    
+        where D: de::Deserializer
+    {
+        struct ValueVisitor;
+
+        impl de::Visitor for ValueVisitor {
+            type Value = Value;
+
+            fn expecting(&self, fmt: &mut fmt::Formatter) ->Result<(), fmt::Error>
+            {
+                fmt.write_str("AMF string")
+            }
+
+            fn visit_bool<E>(self, value: bool) -> Result<Value, E>
+                where E: de::Error,
+            {
+                Ok(Value::Bool(value))
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<Value, E>
+                where E: de::Error,
+            {
+                Ok(Value::Number(value))
+            }
+
+            fn visit_unit<E>(self) -> Result<Value, E>
+                where E: de::Error,
+            {
+                Ok(Value::Null)
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Value, E>
+                where E: de::Error,
+            {
+                Ok(Value::String(value))
+            }
+
+            fn visit_map<V>(self, mut visitor: V) -> Result<Value, V::Error>
+                where V : de::MapVisitor
+            {
+                let mut values = Map::new();
+
+                while let Some((key, value)) = try!(visitor.visit()) {
+                    values.insert(key, value);
+                }
+
+                if visitor.size_hint().0 == 0 {
+                    Ok(Value::Object(values))
+                } else {
+                    Ok(Value::ECMAArray(values))
+                }
+            }
+        }
+
+        deserializer.deserialize(ValueVisitor)
     }
 }

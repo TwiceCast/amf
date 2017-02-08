@@ -1,7 +1,10 @@
-use std::error;
-use std::fmt;
-use std::io;
+extern crate byteorder;
+
+use std::{error, fmt, io};
 use serde::de;
+use serde;
+use reader::Read;
+use self::byteorder::{BigEndian, ReadBytesExt};
 
 pub struct Deserializer<W> {
 	pub reader: W,
@@ -38,136 +41,194 @@ impl fmt::Display for Error {
 	}
 }
 
-impl<W> de::Deserializer for Deserializer<W>
-	where W: io::Read,
+impl<W> Deserializer<W>
+	where W: Read
+{
+	fn parse_string(&mut self) -> String {
+		let mut tab = Vec::new();
+		for _ in 0..2 {
+			tab.push(self.reader.next().unwrap().unwrap());
+		}
+		let mut c = io::Cursor::new(tab);
+		let nb = c.read_u16::<BigEndian>().unwrap();
+		let mut str = Vec::new();
+		for _ in 0..nb {
+			str.push(self.reader.next().unwrap().unwrap());
+		}
+		String::from_utf8(str).unwrap()
+	}
+
+	fn parse_string_or_end(&mut self) -> Option<String> {
+		let mut tab = Vec::new();
+		for _ in 0..2 {
+			tab.push(self.reader.next().unwrap().unwrap());
+		}
+		let mut c = io::Cursor::new(tab);
+		let nb = c.read_u16::<BigEndian>().unwrap();
+		if nb == 0
+		{
+			match self.reader.next().unwrap() {
+				Some(0x09) => None,
+				_ => None //Error
+			}
+		}
+		else {
+			let mut str = Vec::new();
+			for _ in 0..nb {
+				str.push(self.reader.next().unwrap().unwrap());
+			}
+			Some(String::from_utf8(str).unwrap())
+		}
+	}
+
+	fn parse_value<T: de::Visitor>(&mut self, visitor: T) -> Result<T::Value, self::Error> {
+		let c = self.reader.next().unwrap();
+		match c {
+			Some(0x00) => {
+				let mut tab = Vec::new();
+				for _ in 0..8 {
+					tab.push(self.reader.next().unwrap().unwrap());
+				}
+				let mut c = io::Cursor::new(tab);
+				let nb = c.read_f64::<BigEndian>().unwrap();
+				visitor.visit_f64(nb)
+			},
+			Some(0x01) => {
+				let tab = vec![self.reader.next().unwrap().unwrap()];
+				let mut c = io::Cursor::new(tab);
+				let b = c.read_u8().unwrap();
+				visitor.visit_bool(b != 0)
+			},
+			Some(0x02) => {
+				visitor.visit_string(self.parse_string())
+			},
+			Some(0x03) => {
+                visitor.visit_map(MapVisitor::new(self, None))
+			}
+			Some(0x08) => {
+				let mut tab = Vec::new();
+				for _ in 0..4 {
+					tab.push(self.reader.next().unwrap().unwrap());
+				}
+				let mut c = io::Cursor::new(tab);
+				let nb = c.read_u32::<BigEndian>().unwrap();
+                visitor.visit_map(MapVisitor::new(self, Some(nb)))
+			}
+			_ => visitor.visit_unit()
+		}
+		
+	}
+}
+
+impl<'a, W> serde::Deserializer for &'a mut Deserializer<W>
+	where W: Read,
 {
 
 	type Error = Error;
 
 	fn deserialize<T: de::Visitor>(self, visitor : T) -> Result<T::Value, self::Error> {
-		visitor.visit_unit()
+		self.parse_value(visitor)
 	}
-
-/*	fn deserialize_bool<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_u8<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_i8<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_u16<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_i16<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_u32<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_i32<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_u64<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_i64<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_f32<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_f64<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_char<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_str<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_string<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_bytes<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_byte_buf<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_option<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_unit<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_unit_struct<T : de::Visitor>(self, _name: &'static str, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_seq<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_seq_fixed_size<T : de::Visitor>(self, _len: usize, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_newtype_struct<T : de::Visitor>(self, _name: &'static str, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_tuple<T : de::Visitor>(self, _len: usize, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-
-	fn deserialize_tuple_struct<T : de::Visitor>(self, _name: &'static str, _len: usize, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-	
-	fn deserialize_map<T : de::Visitor>(self, _v : T) -> Result<T::Value, self::Error> {
-
-	}
-	
-	fn deserialize_struct<T : de::Visitor>(self, _name: &'static str, _s: &'static [&'static str], _v : T) -> Result<T::Value, self::Error> {
-
-	}*/
-
-/*	fn deserialize_struct_field<T : de::Visitor>(self, visitor : T) -> Result<T::Value, self::Error> {
-		Ok(visitor.visit_struct_field())
-	}*/
-
-/*	fn deserialize_enum<T : de::Visitor>(self, _name: &'static str, _s: &'static [&'static str], visitor : T) -> Result<T::Value, self::Error> {
-		visitor.visit_enum(EnumVisitor{})
-	}
-
-	fn deserialize_ignored_any<T : de::Visitor>(self, visitor : T) -> Result<T::Value, self::Error> {
-		Err(self::Error())
-	}*/
 
 	forward_to_deserialize! {
         bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string
         unit option seq seq_fixed_size bytes byte_buf map unit_struct
         newtype_struct tuple_struct struct struct_field tuple enum ignored_any
+	}	
+}
+
+pub struct StringDeserializer<W> {
+	pub reader: W,
+}
+
+impl<W> StringDeserializer<W>
+	where W: Read
+{
+	fn parse_string(&mut self) -> String {
+		let mut tab = Vec::new();
+		for _ in 0..2 {
+			tab.push(self.reader.next().unwrap().unwrap());
+		}
+		let mut c = io::Cursor::new(tab);
+		let nb = c.read_u16::<BigEndian>().unwrap();
+		let mut str = Vec::new();
+		for _ in 0..nb {
+			str.push(self.reader.next().unwrap().unwrap());
+		}
+		let s = String::from_utf8(str).unwrap();
+		s
 	}
-	
+}
+
+impl<'a, W> serde::Deserializer for &'a mut StringDeserializer<W>
+	where W: Read,
+{
+
+	type Error = Error;
+
+	fn deserialize<T: de::Visitor>(self, visitor : T) -> Result<T::Value, self::Error> {
+		visitor.visit_string(self.parse_string())
+	}
+
+	forward_to_deserialize! {
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string
+        unit option seq seq_fixed_size bytes byte_buf map unit_struct
+        newtype_struct tuple_struct struct struct_field tuple enum ignored_any
+	}	
+}
+
+struct MapVisitor<'a, R: Read + 'a> {
+    de: &'a mut Deserializer<R>,
+    size: u32,
+    map: bool
+}
+
+impl<'a, R: Read + 'a> MapVisitor<'a, R> {
+    fn new(de: &'a mut Deserializer<R>, size: Option<u32>) -> Self {
+    	match size {
+    		None => {
+        		MapVisitor {
+            		de: de,
+            		size: 0,
+            		map: true
+        		}    			
+    		},
+    		Some(size) => {
+    			MapVisitor {
+    				de: de,
+    				size: size,
+    				map: false
+    			}
+    		}
+    	}
+    }
+}
+
+impl<'a, R: Read + 'a> de::MapVisitor for MapVisitor<'a, R> {
+    type Error = Error;
+
+    fn visit_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, self::Error> 
+        where T: de::DeserializeSeed,
+   {
+   		let mut de = StringDeserializer{reader: self.de.reader.copy()};
+   		let ret = seed.deserialize(&mut de).unwrap();
+   		match self.de.parse_string_or_end() {
+	   		None => if self.map || self.size == 0 { Ok(None) } else { Ok(None) /* Error */ },
+	   		_ => if self.map || self.size != 0 { if !self.map {self.size -= 1;} Ok(Some(ret)) } else { Ok(None) /* Error */ }
+   		}
+   }
+
+    fn visit_value_seed<T>(&mut self, seed: T) -> Result<T::Value, self::Error> 
+        where T: de::DeserializeSeed,
+   {
+   		seed.deserialize(&mut *self.de)
+   }
+
+   fn size_hint(&self) -> (usize, Option<usize>) {
+	   	if self.map {
+   			(0, None)
+	   	} else {
+	   		(1, None)
+	   	}
+   }
 }

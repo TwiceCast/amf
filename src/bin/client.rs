@@ -21,7 +21,7 @@ fn main() {
 	map.insert("proprieties2".to_string(), Value::String("42Yolo".to_string()));
 	map.insert("proprieties3".to_string(), Value::Bool(true));
 	map.insert("proprieties4".to_string(), Value::ECMAArray(tab));
-	let val = Value::Object(map);
+	let val = Value::Object(map);//Value::Object(map);
 	println!("Envoi de {}", val.to_string());
 	let mut ser = Vec::with_capacity(128);
 	{
