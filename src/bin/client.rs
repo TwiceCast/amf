@@ -21,12 +21,12 @@ fn main() {
 	map.insert("proprieties2".to_string(), Value::String("42Yolo".to_string()));
 	map.insert("proprieties3".to_string(), Value::Bool(true));
 	map.insert("proprieties4".to_string(), Value::ECMAArray(tab));
-	let val = Value::Object(map);//Value::Object(map);
+	let val = Value::Object(map);
 	println!("Envoi de {}", val.to_string());
 	let mut ser = Vec::with_capacity(128);
 	{
-		let serializer = Serializer {writer: &mut ser };	
-		let _ = val.serialize(serializer);	
+		let serializer = Serializer {writer: &mut ser };
+		let _ = val.serialize(serializer);
 	}
     let mut stream = TcpStream::connect("127.0.0.1:5432").unwrap();
     let mut response = [0; 128];

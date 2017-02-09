@@ -118,15 +118,6 @@ impl Value {
             None
         }
     }
-
-    pub fn is_null(&self) -> bool {
-        if let Value::Null = *self {
-            true
-        }
-        else {
-            false
-        }
-    }
 }
 
 // static NULL: Value = Value::Null;

@@ -1,61 +1,43 @@
 extern crate byteorder;
 
-use std::{error, fmt, io};
+use std::io;
 use serde::de;
 use serde;
 use reader::Read;
+use error::Error;
 use self::byteorder::{BigEndian, ReadBytesExt};
 
 pub struct Deserializer<W> {
 	pub reader: W,
 }
 
-//
-// TODO make the Error generic between ser and de
-//
-#[derive(Debug)]
-pub enum Error {
-	None,
-	Error,
-}
-
-impl de::Error for Error {
-	fn custom<T: fmt::Display>(_msg: T) -> Self {
-		Error::Error
-	}
-}
-
-impl error::Error for Error {
-	fn description(&self) -> &str {
-		"Error"
-	}
-
-	fn cause(&self) -> Option<&error::Error> {
-		None
-	}
-}
-
-impl fmt::Display for Error {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "Error")
-	}
-}
-
 impl<W> Deserializer<W>
 	where W: Read
 {
-	fn parse_string(&mut self) -> String {
+	fn next_value_or_eof(&mut self) -> Result<u8, self::Error>
+	{
+		match try!(self.reader.next()) {
+			None => Err(Error::UnexpectedEOF),
+			Some(c) => Ok(c),
+		}
+	}
+
+	fn parse_string(&mut self) -> Result<String, self::Error> {
 		let mut tab = Vec::new();
 		for _ in 0..2 {
-			tab.push(self.reader.next().unwrap().unwrap());
+			let c = try!(self.next_value_or_eof());
+			tab.push(c);
 		}
 		let mut c = io::Cursor::new(tab);
 		let nb = c.read_u16::<BigEndian>().unwrap();
 		let mut str = Vec::new();
 		for _ in 0..nb {
-			str.push(self.reader.next().unwrap().unwrap());
+			match try!(self.reader.next()) {
+				None => return Err(Error::InvalidSize),
+				Some(c) => str.push(c),
+			}
 		}
-		String::from_utf8(str).unwrap()
+		Ok(String::from_utf8(str).unwrap())
 	}
 
 	fn parse_string_or_end(&mut self) -> Option<String> {
@@ -87,20 +69,23 @@ impl<W> Deserializer<W>
 			Some(0x00) => {
 				let mut tab = Vec::new();
 				for _ in 0..8 {
-					tab.push(self.reader.next().unwrap().unwrap());
+					let c = try!(self.next_value_or_eof());
+					tab.push(c);
 				}
 				let mut c = io::Cursor::new(tab);
 				let nb = c.read_f64::<BigEndian>().unwrap();
 				visitor.visit_f64(nb)
 			},
 			Some(0x01) => {
-				let tab = vec![self.reader.next().unwrap().unwrap()];
-				let mut c = io::Cursor::new(tab);
-				let b = c.read_u8().unwrap();
-				visitor.visit_bool(b != 0)
+				let c = try!(self.next_value_or_eof());
+				let tab = vec![c];
+				let mut cursor = io::Cursor::new(tab);
+				let b = cursor.read_u8().unwrap();
+				visitor.visit_bool(b != 0)						
 			},
 			Some(0x02) => {
-				visitor.visit_string(self.parse_string())
+				let s = try!(self.parse_string());
+				visitor.visit_string(s)
 			},
 			Some(0x03) => {
                 visitor.visit_map(MapVisitor::new(self, None))
@@ -108,7 +93,8 @@ impl<W> Deserializer<W>
 			Some(0x08) => {
 				let mut tab = Vec::new();
 				for _ in 0..4 {
-					tab.push(self.reader.next().unwrap().unwrap());
+					let c = try!(self.next_value_or_eof());
+					tab.push(c);
 				}
 				let mut c = io::Cursor::new(tab);
 				let nb = c.read_u32::<BigEndian>().unwrap();
@@ -116,7 +102,6 @@ impl<W> Deserializer<W>
 			}
 			_ => visitor.visit_unit()
 		}
-		
 	}
 }
 
@@ -144,19 +129,30 @@ pub struct StringDeserializer<W> {
 impl<W> StringDeserializer<W>
 	where W: Read
 {
-	fn parse_string(&mut self) -> String {
+	fn next_value_or_eof(&mut self) -> Result<u8, self::Error>
+	{
+		match try!(self.reader.next()) {
+			None => Err(Error::UnexpectedEOF),
+			Some(c) => Ok(c),
+		}
+	}
+
+	fn parse_string(&mut self) -> Result<String, self::Error> {
 		let mut tab = Vec::new();
 		for _ in 0..2 {
-			tab.push(self.reader.next().unwrap().unwrap());
+			let c = try!(self.next_value_or_eof());
+			tab.push(c);
 		}
 		let mut c = io::Cursor::new(tab);
 		let nb = c.read_u16::<BigEndian>().unwrap();
 		let mut str = Vec::new();
 		for _ in 0..nb {
-			str.push(self.reader.next().unwrap().unwrap());
+			match try!(self.reader.next()) {
+				None => return Err(Error::InvalidSize),
+				Some(c) => str.push(c),
+			}
 		}
-		let s = String::from_utf8(str).unwrap();
-		s
+		Ok(String::from_utf8(str).unwrap())
 	}
 }
 
@@ -167,7 +163,8 @@ impl<'a, W> serde::Deserializer for &'a mut StringDeserializer<W>
 	type Error = Error;
 
 	fn deserialize<T: de::Visitor>(self, visitor : T) -> Result<T::Value, self::Error> {
-		visitor.visit_string(self.parse_string())
+		let s = try!(self.parse_string());
+		visitor.visit_string(s)
 	}
 
 	forward_to_deserialize! {
@@ -211,10 +208,10 @@ impl<'a, R: Read + 'a> de::MapVisitor for MapVisitor<'a, R> {
         where T: de::DeserializeSeed,
    {
    		let mut de = StringDeserializer{reader: self.de.reader.copy()};
-   		let ret = seed.deserialize(&mut de).unwrap();
+   		let ret = seed.deserialize(&mut de);
    		match self.de.parse_string_or_end() {
-	   		None => if self.map || self.size == 0 { Ok(None) } else { Ok(None) /* Error */ },
-	   		_ => if self.map || self.size != 0 { if !self.map {self.size -= 1;} Ok(Some(ret)) } else { Ok(None) /* Error */ }
+	   		None => if self.map || self.size == 0 { Ok(None) } else { Err(Error::InvalidSize) },
+	   		_ => if self.map || self.size != 0 { if !self.map {self.size -= 1;} Ok(Some(ret.unwrap())) } else { Err(Error::InvalidSize) }
    		}
    }
 

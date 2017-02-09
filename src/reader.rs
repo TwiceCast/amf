@@ -1,9 +1,9 @@
-use std::io;
+use error::Error;
 
 pub trait Read {
 	fn copy(& self) -> Self;
-    fn next(&mut self) -> io::Result<Option<u8>>;
-    fn peek(&mut self) -> io::Result<Option<u8>>;
+    fn next(&mut self) -> Result<Option<u8>, Error>;
+    fn peek(&mut self) -> Result<Option<u8>, Error>;
     fn discard(&mut self);
     fn position(&self) -> Position;
     fn peek_position(&self) -> Position;
@@ -38,15 +38,9 @@ impl<'a> Read for SliceReader<'a> {
 		SliceReader{slice: self.slice, index: self.index, position: self.position}
 	}
 
-    fn next(&mut self) -> io::Result<Option<u8>> {
+    fn next(&mut self) -> Result<Option<u8>, Error> {
     	if self.index < self.slice.len() {
-    		if self.slice[self.index] == b'\n' {
-				self.position.line += 1;
-				self.position.column = 0;
-			}
-			else {
-				self.position.column += 1;
-			}
+			self.position.column += 1;
 			let c = self.slice[self.index];
     		self.index += 1;
     		Ok(Some(c))
@@ -56,7 +50,7 @@ impl<'a> Read for SliceReader<'a> {
     	}
     }
 
-    fn peek(&mut self) -> io::Result<Option<u8>> {
+    fn peek(&mut self) -> Result<Option<u8>, Error> {
     	if self.index < self.slice.len() {
     		Ok(Some(self.slice[self.index]))
     	}
