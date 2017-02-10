@@ -259,3 +259,49 @@ impl de::Deserialize for Value {
         deserializer.deserialize(ValueVisitor)
     }
 }
+
+#[derive(Clone, Copy)]
+pub enum Marker {
+    Number,
+    Boolean,
+    String,
+    Object,
+    Movieclip,
+    Null,
+    Undefined,
+    Reference,
+    ECMAArray,
+    ObjectEnd,
+    StrictArray,
+    Date,
+    LongString,
+    Unsupported,
+    Recordset,
+    XMLDocument,
+    TypedObject
+}
+
+impl From<u8> for Marker {
+    fn from(v: u8) -> Marker {
+        match v {
+            0x00 => Marker::Number,
+            0x01 => Marker::Boolean,
+            0x02 => Marker::String,
+            0x03 => Marker::Object,
+            0x04 => Marker::Movieclip,
+            0x05 => Marker::Null,
+            0x06 => Marker::Undefined,
+            0x07 => Marker::Reference,
+            0x08 => Marker::ECMAArray,
+            0x09 => Marker::ObjectEnd,
+            0x0A => Marker::StrictArray,
+            0x0B => Marker::Date,
+            0x0C => Marker::LongString,
+            0x0D => Marker::Unsupported,
+            0x0E => Marker::Recordset,
+            0x0F => Marker::XMLDocument,
+            0x10 => Marker::TypedObject,
+            _ => Marker::Undefined
+        }
+    }
+}

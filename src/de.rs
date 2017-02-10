@@ -6,6 +6,7 @@ use serde;
 use reader::Read;
 use error::Error;
 use self::byteorder::{BigEndian, ReadBytesExt};
+use value::Marker;
 
 pub struct Deserializer<W> {
 	pub reader: W,
@@ -14,6 +15,11 @@ pub struct Deserializer<W> {
 impl<W> Deserializer<W>
 	where W: Read
 {
+	fn read_marker(&mut self) -> Marker
+	{
+		Marker::from(self.reader.next().unwrap().unwrap())
+	}
+
 	fn next_value_or_eof(&mut self) -> Result<u8, self::Error>
 	{
 		match try!(self.reader.next()) {
@@ -64,9 +70,9 @@ impl<W> Deserializer<W>
 	}
 
 	fn parse_value<T: de::Visitor>(&mut self, visitor: T) -> Result<T::Value, self::Error> {
-		let c = self.reader.next().unwrap();
+		let c = self.read_marker();
 		match c {
-			Some(0x00) => {
+			Marker::Number => {
 				let mut tab = Vec::new();
 				for _ in 0..8 {
 					let c = try!(self.next_value_or_eof());
@@ -76,21 +82,21 @@ impl<W> Deserializer<W>
 				let nb = c.read_f64::<BigEndian>().unwrap();
 				visitor.visit_f64(nb)
 			},
-			Some(0x01) => {
+			Marker::Boolean => {
 				let c = try!(self.next_value_or_eof());
 				let tab = vec![c];
 				let mut cursor = io::Cursor::new(tab);
 				let b = cursor.read_u8().unwrap();
 				visitor.visit_bool(b != 0)						
 			},
-			Some(0x02) => {
+			Marker::String => {
 				let s = try!(self.parse_string());
 				visitor.visit_string(s)
 			},
-			Some(0x03) => {
+			Marker::Object => {
                 visitor.visit_map(MapVisitor::new(self, None))
 			}
-			Some(0x08) => {
+			Marker::ECMAArray => {
 				let mut tab = Vec::new();
 				for _ in 0..4 {
 					let c = try!(self.next_value_or_eof());
