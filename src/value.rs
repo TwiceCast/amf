@@ -3,6 +3,7 @@ extern crate byteorder;
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::str;
 use serde::de;
 use std::convert::From;
 
@@ -233,6 +234,15 @@ impl de::Deserialize for Value {
                 Ok(Value::Null)
             }
 
+            //
+            // Here None remplace Undefined
+            //
+            fn visit_none<E>(self) -> Result<Value, E>
+                where E: de::Error,
+            {
+                Ok(Value::Undefined)
+            }
+
             fn visit_string<E>(self, value: String) -> Result<Value, E>
                 where E: de::Error,
             {
@@ -253,6 +263,17 @@ impl de::Deserialize for Value {
                 } else {
                     Ok(Value::ECMAArray(values))
                 }
+            }
+
+            fn visit_seq<V>(self, mut visitor: V) -> Result<Value, V::Error>
+                where V : de::SeqVisitor
+            {
+                let mut values = Vec::new();
+
+                while let Some(value) = try!(visitor.visit()) {
+                    values.push(value);
+                }
+                Ok(Value::StrictArray(values))
             }
         }
 

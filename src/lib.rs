@@ -386,4 +386,65 @@ mod tests {
 	    assert_eq!(v, Value::Null)		
 	}
 
+	#[test]
+	fn deserialize_undefined() {
+		let v = vec![0x06];
+	    let s = SliceReader::new(&v);
+	    let mut de = Deserializer{reader: s};
+	    use serde::Deserialize;
+	    let v = Value::deserialize(&mut de).unwrap();
+	    assert_eq!(v, Value::Undefined)		
+	}
+
+	#[test]
+	fn deserialize_empty_strict_array() {
+		let v = vec![0x0A, 0x00, 0x00, 0x00, 0x00];
+	    let s = SliceReader::new(&v);
+	    let mut de = Deserializer{reader: s};
+	    use serde::Deserialize;
+	    let v = Value::deserialize(&mut de).unwrap();
+	    let vec = vec![];
+	    assert_eq!(v, Value::StrictArray(vec))
+	}
+
+	#[test]
+	fn deserialize_strict_array() {
+		let v = vec![
+		0x0A, 0x00, 0x00, 0x00, 0x02,
+		0x00, 0x40, 0x45, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0xC0, 0x45, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+		];
+	    let s = SliceReader::new(&v);
+	    let mut de = Deserializer{reader: s};
+	    use serde::Deserialize;
+	    let v = Value::deserialize(&mut de).unwrap();
+	    let mut vec = vec![];
+	    vec.push(Value::Number(42.));
+	    vec.push(Value::Number(-42.));
+	    assert_eq!(v, Value::StrictArray(vec))
+	}
+
+	#[test]
+	fn deserialize_holed_strict_array() {
+		let v = vec![
+		0x0A, 0x00, 0x00, 0x00, 0x05,
+		0x06,
+		0x06,
+		0x00, 0x40, 0x45, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x06,
+		0x00, 0xC0, 0x45, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+		];
+	    let s = SliceReader::new(&v);
+	    let mut de = Deserializer{reader: s};
+	    use serde::Deserialize;
+	    let v = Value::deserialize(&mut de).unwrap();
+	    let mut vec = vec![];
+	    vec.push(Value::Undefined);
+	    vec.push(Value::Undefined);
+	    vec.push(Value::Number(42.));
+	    vec.push(Value::Undefined);
+	    vec.push(Value::Number(-42.));
+	    assert_eq!(v, Value::StrictArray(vec))
+	}
+
 }

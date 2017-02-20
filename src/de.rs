@@ -3,7 +3,7 @@ extern crate byteorder;
 use std::io;
 use serde::de;
 use serde;
-use reader::Read;
+use reader::{Read, SliceReader};
 use error::Error;
 use self::byteorder::{BigEndian, ReadBytesExt};
 use value::Marker;
@@ -15,6 +15,10 @@ pub struct Deserializer<W> {
 impl<W> Deserializer<W>
 	where W: Read
 {
+	pub fn new(reader: W) -> Self {
+		Deserializer{reader: reader}
+	}
+
 	fn read_marker(&mut self) -> Marker
 	{
 		Marker::from(self.reader.next().unwrap().unwrap())
@@ -69,6 +73,18 @@ impl<W> Deserializer<W>
 		}
 	}
 
+	fn read_u32(&mut self) -> Result<u32, self::Error>
+	{
+		let mut tab = Vec::new();
+		for _ in 0..4 {
+			let c = try!(self.next_value_or_eof());
+			tab.push(c);
+		}
+		let mut c = io::Cursor::new(tab);
+		let nb = try!(c.read_u32::<BigEndian>());
+		Ok(nb)
+	}
+
 	fn parse_value<T: de::Visitor>(&mut self, visitor: T) -> Result<T::Value, self::Error> {
 		let c = self.read_marker();
 		match c {
@@ -97,14 +113,15 @@ impl<W> Deserializer<W>
                 visitor.visit_map(MapVisitor::new(self, None))
 			}
 			Marker::ECMAArray => {
-				let mut tab = Vec::new();
-				for _ in 0..4 {
-					let c = try!(self.next_value_or_eof());
-					tab.push(c);
-				}
-				let mut c = io::Cursor::new(tab);
-				let nb = c.read_u32::<BigEndian>().unwrap();
+				let nb = try!(self.read_u32());
                 visitor.visit_map(MapVisitor::new(self, Some(nb)))
+			}
+			Marker::StrictArray => {
+				let nb = try!(self.read_u32());
+                visitor.visit_seq(SeqVisitor::new(self, nb))
+			}
+			Marker::Undefined => {
+				visitor.visit_none()
 			}
 			_ => visitor.visit_unit()
 		}
@@ -234,4 +251,89 @@ impl<'a, R: Read + 'a> de::MapVisitor for MapVisitor<'a, R> {
 	   		(1, None)
 	   	}
    }
+}
+
+struct SeqVisitor<'a, R: Read + 'a> {
+    de: &'a mut Deserializer<R>,
+    size: u32,
+}
+
+impl<'a, R: Read + 'a> SeqVisitor<'a, R> {
+    fn new(de: &'a mut Deserializer<R>, size: u32) -> Self {
+    	SeqVisitor {
+    		de: de,
+    		size: size,
+    	}  			
+    }
+}
+
+impl<'a, R: Read + 'a> de::SeqVisitor for SeqVisitor<'a, R> {
+    type Error = Error;
+
+    fn visit_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, self::Error> 
+        where T: de::DeserializeSeed,
+   {
+   		if self.size > 0 {
+	   		let value = try!(seed.deserialize(&mut *self.de));
+	   		self.size -= 1;
+	   		Ok(Some(value))
+   		} else {
+   			Ok(None)
+   		}
+   }
+}
+/*
+struct DateVisitor<'a, R: Read + 'a> {
+    de: &'a mut Deserializer<R>,
+}
+
+impl<'a, R: Read + 'a> DateVisitor<'a, R> {
+    fn DateVisitor(de: &'a mut Deserializer<R>) -> Self {
+    	DateVisitor {
+    		de: de,
+    	}  			
+    }
+}
+
+impl<'a, R: Read + 'a> de::VariantVisitor for DateVisitor<'a, R> {
+    type Error = Error;
+
+    fn visit_unit(self) -> Result<(), Error>
+    {
+		Ok(())    	
+    }
+
+    fn visit_newtype_seed<T : de::DeserializeSeed>(self, seed: T) -> Result<T::Value, Error>
+    {
+    	seed.deserialize(&mut *self.de)
+    }
+
+    fn visit_tuple<T: de::Visitor>(self, _: usize, seed: T) -> Result<T::Value, Error>
+    {
+    	seed.visit_unit()
+    }
+
+    fn visit_struct<T : de::Visitor>(self, _name : &'static [&'static str], seed: T) -> Result<T::Value, Error>
+    {
+    	seed.visit_unit()
+    }
+}
+
+impl<'a, R: Read + 'a> de::EnumVisitor for DateVisitor<'a, R> {
+    type Error = Error;
+
+    type Variant = Self;
+
+    fn visit_variant_seed<T : de::DeserializeSeed>(self, seed: T) -> Result<(T::Value, Self::Variant), Error>
+    {
+    	let v = seed.deserialize(&mut *self.de).unwrap();
+    	Ok((v, self))
+    }
+}*/
+
+pub fn from_slice<T: de::Deserialize>(slice: &[u8]) -> Result<T, Error> {
+	let read = SliceReader::new(slice);
+    let mut de = Deserializer::new(read);
+    let value = try!(de::Deserialize::deserialize(&mut de));
+    Ok(value)
 }

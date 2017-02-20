@@ -1,4 +1,4 @@
-use std::{error, fmt};
+use std::{error, fmt, io};
 use serde::de;
 
 //
@@ -10,6 +10,7 @@ pub enum Error {
 	UnexpectedEOF,
 	SyntaxError,
 	InvalidSize,
+	IoError(io::Error),
 }
 
 impl de::Error for Error {
@@ -31,5 +32,11 @@ impl error::Error for Error {
 impl fmt::Display for Error {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "Error")
+	}
+}
+
+impl From<io::Error> for Error {
+	fn from(err: io::Error) -> Error {
+		Error::IoError(err)		
 	}
 }

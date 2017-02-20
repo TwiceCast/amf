@@ -24,7 +24,7 @@ pub struct SliceReader<'a> {
 
 impl<'a> SliceReader<'a> {
 
-	pub fn new(slice: &'a [u8]) -> Self {
+    pub fn new(slice: &'a [u8]) -> Self {
         SliceReader {
             slice: slice,
             index: 0,
@@ -34,29 +34,29 @@ impl<'a> SliceReader<'a> {
 }
 
 impl<'a> Read for SliceReader<'a> {
-	fn copy(&self) -> Self {
-		SliceReader{slice: self.slice, index: self.index, position: self.position}
-	}
+    fn copy(&self) -> Self {
+        SliceReader{slice: self.slice, index: self.index, position: self.position}
+    }
 
     fn next(&mut self) -> Result<Option<u8>, Error> {
-    	if self.index < self.slice.len() {
-			self.position.column += 1;
-			let c = self.slice[self.index];
-    		self.index += 1;
-    		Ok(Some(c))
-    	}
-    	else {
-		    Ok(None)
-    	}
+        if self.index < self.slice.len() {
+            self.position.column += 1;
+            let c = self.slice[self.index];
+            self.index += 1;
+            Ok(Some(c))
+        }
+        else {
+            Ok(None)
+        }
     }
 
     fn peek(&mut self) -> Result<Option<u8>, Error> {
-    	if self.index < self.slice.len() {
-    		Ok(Some(self.slice[self.index]))
-    	}
-    	else {
-		    Ok(None)
-    	}
+        if self.index < self.slice.len() {
+            Ok(Some(self.slice[self.index]))
+        }
+        else {
+            Ok(None)
+        }
     }
 
     fn discard(&mut self) {
@@ -64,10 +64,10 @@ impl<'a> Read for SliceReader<'a> {
     }
 
     fn position(&self) -> Position {
-    	Position{line: self.position.line, column: self.position.column}
+        Position{line: self.position.line, column: self.position.column}
     }
 
     fn peek_position(&self) -> Position {
-    	Position{line: self.position.line, column: self.position.column}
+        Position{line: self.position.line, column: self.position.column}
     }
 }
