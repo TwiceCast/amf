@@ -332,7 +332,9 @@ impl<'a, R: Read + 'a> de::EnumVisitor for DateVisitor<'a, R> {
 }*/
 
 pub fn from_slice<T: de::Deserialize>(slice: &[u8]) -> Result<T, Error> {
-	let read = SliceReader::new(slice);
+	let mut slice = slice.to_vec();
+	slice.insert(0, 0x03);
+	let read = SliceReader::new(&slice);
     let mut de = Deserializer::new(read);
     let value = try!(de::Deserialize::deserialize(&mut de));
     Ok(value)
