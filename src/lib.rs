@@ -2,7 +2,7 @@
 extern crate serde;
 
 pub use self::ser::Serializer;
-pub use self::de::Deserializer;
+pub use self::de::{Deserializer, from_slice};
 pub use self::reader::SliceReader;
 pub use self::value::Value;
 pub use self::error::Error;
