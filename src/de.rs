@@ -19,9 +19,12 @@ impl<W> Deserializer<W>
 		Deserializer{reader: reader}
 	}
 
-	fn read_marker(&mut self) -> Marker
+	fn read_marker(&mut self) -> Result<Marker, self::Error>
 	{
-		Marker::from(self.reader.next().unwrap().unwrap())
+		match try!(self.reader.next()) {
+			None => Err(Error::UnexpectedEOF),
+			Some(c) => Ok(Marker::from(c)),
+		}
 	}
 
 	fn next_value_or_eof(&mut self) -> Result<u8, self::Error>
@@ -86,7 +89,7 @@ impl<W> Deserializer<W>
 	}
 
 	fn parse_value<T: de::Visitor>(&mut self, visitor: T) -> Result<T::Value, self::Error> {
-		let c = self.read_marker();
+		let c = try!(self.read_marker());
 		match c {
 			Marker::Number => {
 				let mut tab = Vec::new();
