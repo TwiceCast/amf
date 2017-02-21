@@ -6,6 +6,7 @@ pub use self::de::{Deserializer, from_slice};
 pub use self::reader::SliceReader;
 pub use self::value::Value;
 pub use self::error::Error;
+pub use serde::Deserialize;
 
 pub mod ser;
 pub mod de;
