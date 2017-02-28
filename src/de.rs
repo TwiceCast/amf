@@ -12,11 +12,17 @@ pub struct Deserializer<W> {
 	pub reader: W,
 }
 
+impl<'a> Deserializer<SliceReader<'a>> {
+	pub fn new_from_slice(slice: &'a [u8]) -> Self {
+		Deserializer{ reader: SliceReader::new(slice) }
+	}
+}
+
 impl<W> Deserializer<W>
 	where W: Read
 {
 	pub fn new(reader: W) -> Self {
-		Deserializer{reader: reader}
+		Deserializer{ reader: reader }
 	}
 
 	fn read_marker(&mut self) -> Result<Marker, self::Error>

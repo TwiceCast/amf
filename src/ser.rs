@@ -20,6 +20,10 @@ impl<'a, W : io::Write> Serializer<'a, W> {
 		let _ = self.writer.write(&array);
 		let _ = self.writer.write(v.as_bytes());
 	}
+
+	pub fn new(writer: &'a mut W) -> Self {
+		Serializer{writer: writer}
+	}
 }
 
 pub struct SerializeSeq {
